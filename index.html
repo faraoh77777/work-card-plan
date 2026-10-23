@@ -45,11 +45,11 @@ return{basis:set.basis,note:set.note||'',source:c.source,eligible:total>=minUse,
 // 가맹점 분류 규칙은 work-tax-planner js/cardparse.js의 RULES를 이 앱의 사용구분으로 옮긴 것입니다.
 const IMPORT_COLS={date:[/^(이용|승인|거래|사용|매출)(일자|일시|일|날짜)/,/(이용|승인|거래|사용|매출)(일자|일시|일)/,/^(일자|날짜|일시)$/],
 merchant:[/가맹점명|이용가맹점|가맹점\(?상호/,/가맹점/,/이용하신곳|이용처|사용처|거래처|상호/],
-amount:[/^(이용|승인|거래|사용|매출|국내이용)금액/,/원화(금액|환산)|^금액/,/금액/],
+amount:[/^(이용|승인|거래|사용|매출|국내이용)금액/,/^이용총액/,/원화(금액|환산)|^금액/,/금액/],
 status:[/취소|승인구분|거래구분|매출구분|이용구분|상태|^구분$/],card:[/카드(명|종류|구분|상품)|이용카드|^카드$/],issuer:[/^카드사(명|이름)?$|카드회사|발급사|^금융사/],approval:[/승인번호/],overseas:[/해외|국내외|국내\/해외|통화|국가/],
 // 원금: 할인·포인트를 뺀 이번 달 실제 결제 금액(할부는 이번 회차 금액). 이 칸이 있으면 이용금액 대신 씁니다.
 principal:[/원금/],inst:[/회차/],months:[/할부개월|^개월$|^할부$/],deduct:[/공제여부/]};
-const IMPORT_SKIP={merchant:/번호|사업자|주소|업종|전화|코드/,amount:/예정|청구|수수료|잔액|포인트|할인|적립|외화|현지|해외|이자|원금|회차|단가|취소/,status:/금액|일자|일시/,overseas:/금액|수수료/,date:/결제|청구|입금/};
+const IMPORT_SKIP={merchant:/번호|사업자|주소|업종|전화|코드/,amount:/예정|청구|수수료|잔액|포인트|할인|혜택|적립|외화|현지|해외|이자|원금|회차|단가|취소/,status:/금액|일자|일시/,overseas:/금액|수수료/,date:/결제|청구|입금/};
 const IMPORT_CAT_RULES=[['보험료',/보험|손해|화재|생명/],['통신비',/통신|SKT|SK텔레콤|KT\b|LG\s?U\+|LGU|유플러스|알뜰폰/i],['아파트관리비',/관리비|아파트/],['세금·공과금',/국세|지방세|세금|과태료|한국전력|전기요금|도시가스|수도요금|상하수도|통행료|도로공사|하이패스/],['대학등록금',/등록금/],['상품권',/상품권/],['면세점',/면세/],['대출 상환',/대출|원리금/],
 // 공제 대상 사용구분(세법 기준, 가맹점 이름으로 추정). 세 번째 값은 이름에 있으면 그 구분에서 빼는 말입니다.
 // 의료비: 병원·의원·치과·한의원·약국·보건소·산후조리원·안경·보청기(동물병원·병원 안 매점·주차장 등은 제외)
@@ -71,7 +71,7 @@ m=s.match(/^(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})(?![\d.\-\/])/);if(m&&year)return 
 function importAmount(v){if(typeof v==='number')return Math.round(v);let s=String(v??'').split(/\\n|[\r\n]/)[0].replace(/[\s,원₩]/g,'');const neg=/^-|^△|^▲|^\(.*\)$/.test(s);s=s.replace(/^[-△▲(]|\)$/g,'');if(!/^\d+(\.\d+)?$/.test(s))return NaN;return Math.round(+s)*(neg?-1:1)}
 function importFindCols(head){const used=new Set(),cols={};for(const f of Object.keys(IMPORT_COLS)){for(const re of IMPORT_COLS[f]){const i=head.findIndex((h,c)=>h&&!used.has(c)&&re.test(h)&&!(IMPORT_SKIP[f]&&IMPORT_SKIP[f].test(h)));if(i>=0){cols[f]=i;used.add(i);break}}}return cols}
 // 제목 줄(카드명·조회기간)이 위에 있어도 처음 40줄 안에서 날짜·가맹점·금액 칸 이름이 모두 있는 줄을 찾습니다. 두 줄로 나뉜 칸 이름은 합쳐서 봅니다.
-function importFindHeader(rows){const n=Math.min(40,rows.length),full=c=>c.date!=null&&c.merchant!=null&&c.amount!=null;
+function importFindHeader(rows){const n=Math.min(40,rows.length),full=c=>c.date!=null&&c.merchant!=null&&(c.amount!=null||c.principal!=null);
 for(let r=0;r<n;r++){const one=(rows[r]||[]).map(importText),cols=importFindCols(one);if(!full(cols))continue;const next=(rows[r+1]||[]).map(importText);if(next.some(Boolean)&&!importDate((rows[r+1]||[])[cols.date],2000)){const m=importFindCols(Array.from({length:Math.max(one.length,next.length)},(_,c)=>(one[c]||'')+(next[c]||'')));if(full(m))return{row:r,start:r+2,cols:m}}return{row:r,start:r+1,cols}}
 for(let r=0;r<n;r++){const one=(rows[r]||[]).map(importText),next=(rows[r+1]||[]).map(importText);if(!one.some(Boolean))continue;const cols=importFindCols(Array.from({length:Math.max(one.length,next.length)},(_,c)=>(one[c]||'')+(next[c]||'')));if(full(cols))return{row:r,start:r+2,cols}}return null}
 // 카드사 추정: 파일 이름과 칸 이름 위의 제목 줄만 봅니다(가맹점 이름의 '롯데마트' 등을 카드사로 오인하지 않게).
@@ -182,8 +182,8 @@ async function onImportFile(file){try{const sheets=await readSheets(file);if(!sh
 function openImportDlg(){if(!$('#importDlg').open)$('#importDlg').showModal()}
 // 칸 이름을 못 찾은 파일: 칸 이름 줄과 날짜·사용처·금액 칸을 직접 고릅니다.
 function showImportMapping(row){const rows=importState.sheets[importState.sheet]||[];if(row==null){let best=-1;row=0;rows.slice(0,40).forEach((r,i)=>{const n=r.filter(v=>String(v??'').trim()).length;if(n>best){best=n;row=i}})}importState.mapRow=row;
-const opts=(rows[row]||[]).map((v,i)=>`<option value="${i}">${i+1}열 · ${esc(String(v??'').slice(0,20))}</option>`).join('');
-$('#importBody').innerHTML=`<p class="muted">${esc(importState.file)}에서 날짜·가맹점·금액 칸 이름을 찾지 못했습니다. 칸 이름이 있는 줄과 각 칸을 직접 골라 주세요.</p><label>칸 이름이 있는 줄 번호<input id="map_row" type="number" min="1" max="${rows.length}" value="${row+1}"></label>${[['date','사용일'],['merchant','사용처(가맹점)'],['amount','사용금액']].map(([k,l],n)=>`<label>${l} 칸<select id="map_${k}">${opts.replace(`value="${n}"`,`value="${n}" selected`)}</select></label>`).join('')}<button class="primary" onclick="applyImportMapping()">이 칸으로 읽기</button>`;
+const opts=(rows[row]||[]).map((v,i)=>`<option value="${i}">${i+1}열 · ${esc(String(v??'').slice(0,20))}</option>`).join(''),pi=(rows[row]||[]).findIndex(v=>/원금/.test(importText(v))),def=[0,1,pi>=0?pi:2];
+$('#importBody').innerHTML=`<p class="muted">${esc(importState.file)}에서 날짜·가맹점·금액 칸 이름을 찾지 못했습니다. 칸 이름이 있는 줄과 각 칸을 직접 골라 주세요.</p><label>칸 이름이 있는 줄 번호<input id="map_row" type="number" min="1" max="${rows.length}" value="${row+1}"></label>${[['date','사용일'],['merchant','사용처(가맹점)'],['amount','사용금액(원금 칸이 있으면 원금)']].map(([k,l],n)=>`<label>${l} 칸<select id="map_${k}">${opts.replace(`value="${def[n]}"`,`value="${def[n]}" selected`)}</select></label>`).join('')}<button class="primary" onclick="applyImportMapping()">이 칸으로 읽기</button>`;
 $('#map_row').onchange=e=>showImportMapping(Math.max(0,Math.min(rows.length-1,(+e.target.value||1)-1)));openImportDlg()}
 function applyImportMapping(){const rows=importState.sheets[importState.sheet],v=k=>+$('#map_'+k).value,res=parseCardSheet(rows,importKeys(),{row:importState.mapRow,date:v('date'),merchant:v('merchant'),amount:v('amount')},{name:importState.file,year});if(!res||!res.items.length)return toast('고른 칸에서 읽을 수 있는 내역이 없습니다.');importState.res=res;importState.bulk=res.fileMethod;showImportPreview()}
 // 저장 전 확인 화면: 포함 여부·결제수단·사용구분을 고칠 수 있습니다.
