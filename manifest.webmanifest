@@ -1,0 +1,16 @@
+{
+  "name": "공제플랜 · 연말정산 카드공제 계산기",
+  "short_name": "공제플랜",
+  "description": "카드 사용내역 입력·카드사 엑셀 불러오기·카드 소득공제 계산",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#edf5fa",
+  "theme_color": "#10264a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
