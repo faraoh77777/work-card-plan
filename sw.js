@@ -1,8 +1,8 @@
-/* 공제플랜 서비스워커: 인터넷이 없을 때도 앱 화면이 열리게 합니다.
+/* 똑씀이(구 공제플랜) 서비스워커: 인터넷이 없을 때도 앱 화면이 열리게 합니다.
    화면(index.html)은 항상 인터넷에서 먼저 받고(예전 화면이 남지 않게), 안 되면 저장해 둔 사본을 씁니다.
    같은 주소의 GET 요청만 다루고, 다른 주소(SheetJS cdnjs 등)는 건드리지 않습니다.
    파일을 바꿔 배포할 때는 SW_VERSION을 올립니다. */
-const SW_VERSION = '2026-10-25-03';
+const SW_VERSION = '2026-10-25-04';
 const CACHE = 'card-plan-' + SW_VERSION;
 const FILES = ['./', './index.html', './privacy.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 
