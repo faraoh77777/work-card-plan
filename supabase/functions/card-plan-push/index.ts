@@ -58,7 +58,10 @@ async function runCron() {
   const { data: subs, error } = await db.from('card_plan_push_subs').select('user_id,endpoint,p256dh,auth');
   if (error) throw error;
   const byUser = new Map<string, Sub[]>();
-  for (const s of subs ?? []) byUser.set(s.user_id, [...(byUser.get(s.user_id) ?? []), s]);
+  // 부부 같이 사용: 배우자 기기는 소득자 장부의 경조사로 알림(card_plan_family가 없으면 그냥 본인 장부)
+  const { data: fam } = await db.from('card_plan_family').select('owner,member').eq('mode', 'together');
+  const bookOf = new Map((fam ?? []).map((f) => [f.member, f.owner]));
+  for (const s of subs ?? []) { const b = bookOf.get(s.user_id) ?? s.user_id; byUser.set(b, [...(byUser.get(b) ?? []), s]); }
   // 어제~모레 일정만 보면 됨(전날 알림 ~ 당일 알림)
   const day = (d: number) => new Date(now + KST + d * 864e5).toISOString().slice(0, 10);
   const lo = day(-1), hi = day(2);
